@@ -58,3 +58,5 @@ from .pyhsslms import HssPublicKey
 from .pyhsslms import HssLmsSignature
 from .pyhsslms import HssLmsPrivateKey
 from .pyhsslms import HssLmsPublicKey
+
+from .pyhsslms import getStats

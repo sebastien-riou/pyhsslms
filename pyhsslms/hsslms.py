@@ -203,7 +203,8 @@ def main():
         print("Signing " + filename + " ...")
         prv = pyhsslms.HssLmsPrivateKey(keyname)
         if prv.signFile(filename):
-            print("   ... Success. Signature saved in " + filename + ".sig")
+            print("   ... Success. Signature saved in " + filename + ".sig")  
+            print(pyhsslms.getStats())
         else:
             print("   ... Failed!")
 
@@ -223,6 +224,7 @@ def main():
         pub = pyhsslms.HssLmsPublicKey(keyname)
         if pub.verifyFile(filename):
             print("Signature in " + filename + ".sig is valid.")
+            print(pyhsslms.getStats())
         else:
             print("Signature verification failed!")
         

@@ -171,6 +171,131 @@ err_algorithm_mismatch    = 'LMOTS and LMS with different hash algorithms'
 # ----------------------------------------------------------------------
 # The internal utility routines
 # ----------------------------------------------------------------------
+import io
+class BasicStat(object):
+    def __init__(self, name="", *, just_count=False):
+        self.name = name
+        self.just_count = just_count
+        self.cnt = 0
+        self.sum = 0
+        self.min = None
+        self.max = None
+
+    def inc(self, inc=1):
+        assert(self.just_count)
+        self.cnt += inc
+
+    def new_sample(self, sample):
+        if 0 == self.cnt:
+            self.min = sample
+            self.max = sample
+        else:
+            self.min = min(self.min, sample)
+            self.max = max(self.max, sample)
+        self.cnt += 1
+        self.sum += sample
+
+    @property
+    def average(self):
+        if self.just_count or self.cnt==0:
+            return None
+        return self.sum / self.cnt
+
+    def __str__(self):
+        if self.just_count or self.cnt==0:
+            return self.name + " count=%d" % self.cnt
+        else:
+            return self.name+" min.=%d, ave.=%.1f, max=%d (count=%d)" % (self.min, self.average, self.max, self.cnt)
+
+    def table_line(self, widths):
+        line = "|"
+        dat = {"names":self.name, "minimums":str(self.min), "averages":str(self.average), "maximums":str(self.max), "counts":str(self.cnt)}
+        for col in widths.keys():
+            if dat[col] == "None":
+                line += ' {col:^{width}} |'.format(col="", width=widths[col])
+            else:
+                line += ' {col:^{width}} |'.format(col=dat[col], width=widths[col])
+        return line
+
+class BasicStats(object):
+    def __init__(self):
+        self.stats = dict()
+
+    def add_stat(self, name, just_count=False):
+        self.stats[name] = BasicStat(name, just_count=just_count)
+
+    def minimums(self):
+        out = list()
+        for s in self.stats.values():
+            if not s.just_count:
+                out.append(s.min)
+        return out
+
+    def averages(self):
+        out = list()
+        for s in self.stats.values():
+            if not s.just_count:
+                out.append(s.average)
+        return out
+
+    def maximums(self):
+        out = list()
+        for s in self.stats.values():
+            if not s.just_count:
+                out.append(s.max)
+        return out
+
+    def counts(self):
+        out = list()
+        for s in self.stats.values():
+            if not s.just_count:
+                out.append(s.cnt)
+        return out
+
+    def as_dict_of_list(self):
+        out = dict()
+        out["names"] = self.stats.keys()
+        out["counts"] = self.counts()
+        out["minimums"] = self.minimums()
+        out["averages"] = self.averages()
+        out["maximums"] = self.maximums()
+        return out
+
+    def __str__(self):
+        columns = self.as_dict_of_list()
+        widths = dict()
+        for col in columns.keys():
+            dat = list(filter(lambda x: x is not None, columns[col]))
+            s = list(map(lambda x: str(x), dat))
+            s.append(col)
+            l = list(map(lambda x: len(x), s))
+            widths[col] = max(l)
+
+        header = "|"
+        for col in columns.keys():
+            header += ' {col:^{width}} |'.format(col=col, width=widths[col])
+
+        sep = "|"
+        for col in columns.keys():
+            sep += '-%s-|'%('-'*widths[col])
+
+        lines = io.StringIO()
+        print(header, file=lines)
+        print(sep, file=lines)
+        for s in self.stats.values():
+            print(s.table_line(widths=widths), file=lines)
+
+        return lines.getvalue()
+
+Hstats=BasicStats()
+Hstats.add_stat("H_start",just_count=True)
+Hstats.add_stat("H_update")
+Hstats.add_stat("H_finish",just_count=True)
+Hstats.add_stat("H_blocksPerHash")
+Hstats.add_stat("H_blocks",just_count=True)
+def getStats():
+    global Hstats
+    return Hstats
 
 def H(alg, buf, rvlen):
     """
@@ -180,18 +305,24 @@ def H(alg, buf, rvlen):
     :param rvlen: length of the returned value
     :return: hash value, either 24 bytes or 32 bytes
     """
-    if rvlen not in (32, 24):
-        raise ValueError(err_bad_length, str(rvlen))
-    if alg == 'sha256':
-        h = hashlib.sha256()
-        h.update(buf)
-        rv = h.digest()[0:rvlen]
-    elif alg == 'shake256':
-        h = shake256()
-        h.update(buf)
-        rv = h.digest(rvlen)
-    else:
-        raise ValueError(err_bad_algorithm, alg)
+    #global Hstats
+    #Hstats.stats["H"].new_sample(len(buf))
+    h = H_start(alg)
+    H_update(h,buf)
+    rv = H_finish(h, rvlen)
+    if 0:
+        if rvlen not in (32, 24):
+            raise ValueError(err_bad_length, str(rvlen))
+        if alg == 'sha256':
+            h = hashlib.sha256()
+            h.update(buf)
+            rv = h.digest()[0:rvlen]
+        elif alg == 'shake256':
+            h = shake256()
+            h.update(buf)
+            rv = h.digest(rvlen)
+        else:
+            raise ValueError(err_bad_algorithm, alg)
     return rv
 
 
@@ -201,13 +332,15 @@ def H_start(alg):
     :param alg: the hash algorithm to use
     :return: a handle for H_update and H_finish
     """
+    global Hstats
+    Hstats.stats["H_start"].inc()
     if alg == 'sha256':
         h = hashlib.sha256()
     elif alg == 'shake256':
         h = shake256()
     else:
         raise ValueError(err_bad_algorithm, alg)
-    return h
+    return {"h":h,"size":0}
 
 
 def H_update(h, buf):
@@ -216,7 +349,10 @@ def H_update(h, buf):
     :param h: the handle from H_start
     :param buf: input for the hash computation
     """
-    h.update(buf)
+    global Hstats
+    Hstats.stats["H_update"].new_sample(len(buf))
+    h["h"].update(buf)
+    h["size"] += len(buf)
     return
 
 
@@ -227,6 +363,13 @@ def H_finish(h, rvlen):
     :param rvlen: length of the returned value
     :return: hash value, either 24 bytes or 32 bytes
     """
+    global Hstats
+    Hstats.stats["H_finish"].inc()
+    hh=h["h"]
+    blocks = (h["size"] + hh.block_size -1 )// hh.block_size #approximate formulae not taking into account length
+    Hstats.stats["H_blocksPerHash"].new_sample(blocks)
+    Hstats.stats["H_blocks"].inc(blocks)
+    h=hh
     if rvlen not in (32, 24):
         raise ValueError(err_bad_length, str(rvlen))
     if h.name == 'sha256':

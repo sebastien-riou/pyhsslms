@@ -1,0 +1,15 @@
+#!/bin/sh
+
+rm -f test.pub test.prv null.sig
+python -m pyhsslms.hsslms genkey test $*
+echo "## $*"
+echo "\`\`\`\`"
+python -m pyhsslms.hsslms showprv test
+python -m pyhsslms.hsslms showpub test
+echo "\`\`\`\`"
+python -m pyhsslms.hsslms sign test null
+echo "\`\`\`\`"
+ls -l test.*
+ls -l null.sig
+echo "\`\`\`\`"
+python -m pyhsslms.hsslms verify test null

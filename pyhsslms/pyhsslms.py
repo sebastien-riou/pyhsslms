@@ -49,7 +49,7 @@ import hashlib
 from .compat import NoFileError, FoundFileError
 from .compat import randBytes, toBytes, toHex, fromHex
 from .compat import charNum, u32, u16, u8, int32, shake256
-
+import traceback
 
 # ----------------------------------------------------------------------
 # Constants
@@ -1319,16 +1319,19 @@ from .pyhsslms import lms_shake_m24_h25
             raise FoundFileError
         hss_prv = HssPrivateKey(levels=levels,
                       lms_type=lms_type, lmots_type=lmots_type)
+        print(hss_prv)
         try:
             with open(prv_filename, 'wb') as prv_file:
                 prv_file.write(hss_prv.serialize())
-        except Exception:
+        except Exception as e:
+            print(traceback.format_exc())
             return False
         try:
             with open(pub_filename, 'wb') as pub_file:
                 pub_file.write(hss_prv.publicKey().serialize())
-        except Exception:
-           return False
+        except Exception as e:
+            print(traceback.format_exc())
+            return False
         return cls(key_filename)
 
     def signFile(self, filename):

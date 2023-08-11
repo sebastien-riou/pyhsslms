@@ -94,12 +94,12 @@ def main():
     """
     Command line interface for pyhsslms.py.
     """
-    cmds = ['genkey', 'keygen', 'sign', 'verify', \
+    cmds = ['genkey', 'keygen', 'sign', 'verify', 'verify_stat',\
             'showprv', 'showpub', 'showsig', \
             '--version', '-v', 'version', '--help', '-h', 'help']
 
     if len(sys.argv) < 2 or sys.argv[1] not in cmds:
-        print("error: first argument must be a command")
+        print("error: first argument must be a command.")
         usage(sys.argv[0])
         sys.exit(1)
 
@@ -208,7 +208,7 @@ def main():
         else:
             print("   ... Failed!")
 
-    if sys.argv[1] == 'verify':
+    if sys.argv[1] == 'verify' or sys.argv[1] == 'verify_stat':
         if len(sys.argv) < 3:
             print("error: second argument must be a keyname")
             usage(sys.argv[0])
@@ -223,8 +223,17 @@ def main():
         filename = sys.argv[3]
         pub = pyhsslms.HssLmsPublicKey(keyname)
         if pub.verifyFile(filename):
-            print("Signature in " + filename + ".sig is valid.")
-            print(pyhsslms.getStats())
+            stats = pyhsslms.getStats()
+            if sys.argv[1] == 'verify':
+                print("Signature in " + filename + ".sig is valid.")
+                print(stats)
+            hash_blocks = stats.stats['H_blocks'].cnt
+            pub_key_size = len(pub.hss_pub.pub.I+pub.hss_pub.pub.K)
+            sig_size =  len(open(filename+'.sig', 'rb').read())
+            number_of_sig = pub.hss_pub.maxSignatures()
+            print(number_of_sig,sig_size,hash_blocks)
+            #only true for trunc=32
+            # assert pub_key_size == 48
         else:
             print("Signature verification failed!")
         

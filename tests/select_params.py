@@ -7,8 +7,9 @@ matplotlib.use('agg')
 
 
 def plot_case(alg,trunc):
-    title = 'LMS alg=%s trunc=%d'%(alg,trunc)
+    title = 'LMS/HSS alg=%s trunc=%d'%(alg,trunc)
     pyplot.title(title)
+    title = 'LMS_HSS alg=%s trunc=%d'%(alg,trunc)
     pyplot.suptitle('Number of signatures: hash blocks vs signature size')
     stats = runpy.run_path('stats.py')['out']
     colors = ['red','blue','green','yellow','brown']
@@ -60,6 +61,6 @@ def plot_case(alg,trunc):
     pyplot.savefig(title+'.png', dpi = 600)
     pyplot.close()
 
-for alg in ['sha256']:
+for alg in ['sha256','shake']:
     for trunc in [32]:
         plot_case(alg,trunc)

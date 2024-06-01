@@ -32,7 +32,7 @@ def eval_parameters(args):
     Path(keyfile+'.prv').unlink(missing_ok=True)
     Path(keyfile+'.pub').unlink(missing_ok=True)
     Path(msgfile+'.sig').unlink(missing_ok=True)
-    exe = 'python'
+    exe = 'python3'
     cmd = [exe,'-m', 'pyhsslms.hsslms']
     genkey = capture_output(cmd+['genkey',keyfile]+args).rstrip("\n")
     for i in range(0,10):
@@ -62,9 +62,9 @@ except:
         print('out = dict()',file=f)
 
 with open(resfile,'a') as f:
-    for trunc in [32]:
-        for alg in ['sha256']:
-            for levels in [1,2,3]:
+    for trunc in [24]:
+        for alg in ['shake','sha256']:
+            for levels in [1]:
                 for lms in [5,10,15]:
                     for lmots in [1,2,4,8]:
                         args = params_to_args(levels,lms,lmots,alg,trunc)

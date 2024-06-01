@@ -2,16 +2,18 @@
 
 set -e
 
+PYTHON="python3"
+
 rm -f test.pub test.prv null.sig
-python -m pyhsslms.hsslms genkey test $*
+$PYTHON -m pyhsslms.hsslms genkey test $*
 echo "## $*"
 echo "\`\`\`\`"
-python -m pyhsslms.hsslms showprv test
-python -m pyhsslms.hsslms showpub test
+$PYTHON -m pyhsslms.hsslms showprv test
+$PYTHON -m pyhsslms.hsslms showpub test
 echo "\`\`\`\`"
-python -m pyhsslms.hsslms sign test null
+$PYTHON -m pyhsslms.hsslms sign test null
 echo "\`\`\`\`"
 ls -l test.*
 ls -l null.sig
 echo "\`\`\`\`"
-python -m pyhsslms.hsslms verify test null
+$PYTHON -m pyhsslms.hsslms verify test null
